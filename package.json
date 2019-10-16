@@ -1,0 +1,16 @@
+{
+  "name": "GoogleFlightsExport",
+  "version": "1.0.0",
+  "description": "This script installs as bookmarklet in your browser to export Google Flights results",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack"
+  },
+  "keywords": [],
+  "author": "Guillaume Schaer",
+  "license": "MIT",
+  "devDependencies": {
+    "bookmarklet": "^1.0.4"
+  }
+}
