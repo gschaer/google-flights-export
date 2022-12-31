@@ -11,6 +11,6 @@
   "author": "Guillaume Schaer",
   "license": "MIT",
   "devDependencies": {
-    "bookmarklet": "^1.0.4"
+    "bookmarklet": "^3.0.0"
   }
 }
