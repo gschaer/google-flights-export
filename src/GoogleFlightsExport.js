@@ -1,69 +1,57 @@
-// ==Bookmarklet==
-// @name Google Flights Export
-// @author Guillaume Schaer
-// @style !loadOnce //cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css
-// @script //code.jquery.com/jquery-latest.min.js
-// @script //cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js
-// ==/Bookmarklet==
+import {
+  extractLegsFromDom,
+  formatTripText,
+  formatTripHtml,
+} from "./extract.js"
 
-var copyListener = event => {
-	var trip = "";
-	var tripHTML = "";
+const TOAST_DURATION_MS = 3000
 
-	// Get all segments
-	var segments = $('.gws-flights-results__slice-selection');
+function showToast(message, { error = false } = {}) {
+  const div = document.createElement("div")
+  div.textContent = message
+  div.style.cssText = [
+    "position:fixed",
+    "top:20px",
+    "right:20px",
+    "z-index:2147483647",
+    "padding:12px 16px",
+    "border-radius:6px",
+    "font:14px -apple-system,BlinkMacSystemFont,sans-serif",
+    "color:#fff",
+    `background:${error ? "#d93025" : "#1a73e8"}`,
+    "box-shadow:0 2px 8px rgba(0,0,0,0.2)",
+    "max-width:360px",
+  ].join(";")
+  document.body.appendChild(div)
+  setTimeout(() => div.remove(), TOAST_DURATION_MS)
+}
 
-	// Iterate over each segment
-	segments.each(function(index){
-		var originDate = new Date($(this).find('.gws-flights-results__itinerary-times>.gws-flights-results__times-row>span.flt-subhead1').text());
-		var legs = $(this).find('.gws-flights-results__leg');
-		legs.each(function(index){
-			var flightNumber = $(this).find('.gws-flights-results__other-leg-info>span:last').text().replace(/\s/g, '');
-			var airline = $(this).find('.gws-flights-results__leg-flight>div:first').text();
-			var travelTime = $(this).find('.gws-flights-results__leg-duration>div:first>span').text().replace(/\s/g, '');
-			var departureAirport = $(this).find('.gws-flights-results__leg-departure>div:last>span:first').text();
-			var departureIATACode = $(this).find('.gws-flights-results__leg-departure').find('.gws-flights-results__iata-code').text();
-			var departureOffSetDate = $(this).find('.gws-flights-results__leg-departure').find('.gws-flights__offset-days').text();
-			if(departureOffSetDate == '') {
-				departureOffSetDate = 0;
-			}
-			var departureDate = new Date(originDate);
-			departureDate.setDate(originDate.getDate()+parseInt(departureOffSetDate));
-			var departureTime = $(this).find('.gws-flights-results__leg-departure>div:first>span>span:first').text();
+async function run() {
+  const legs = extractLegsFromDom(document)
+  if (legs.length === 0) {
+    throw new Error(
+      "No flight legs found — is this the Google Flights booking/results page?"
+    )
+  }
+  const text = formatTripText(legs)
+  const html = formatTripHtml(legs)
+  await navigator.clipboard.write([
+    new ClipboardItem({
+      "text/plain": new Blob([text], { type: "text/plain" }),
+      "text/html": new Blob([html], { type: "text/html" }),
+    }),
+  ])
+  return { count: legs.length, text, html }
+}
 
-			var arrivalAirport = $(this).find('.gws-flights-results__leg-arrival>div:last>span:first').text();
-			var arrivalIATACode = $(this).find('.gws-flights-results__leg-arrival').find('.gws-flights-results__iata-code').text();
-			var arrivalOffSetDate = $(this).find('.gws-flights-results__leg-arrival').find('.gws-flights__offset-days').text();
-			if(arrivalOffSetDate == '') {
-				arrivalOffSetDate = 0;
-			}
-			var arrivalDate = new Date(originDate);
-			arrivalDate.setDate(originDate.getDate()+parseInt(arrivalOffSetDate));
-			var arrivalTime = $(this).find('.gws-flights-results__leg-arrival>div:first>span>span:first').text();
-			var leg = "";
-			leg = leg + "*"+airline+ " "+flightNumber+"* (dur: "+travelTime+")" +"\r\n";
-			leg = leg + "Departure "+departureAirport + " ("+departureIATACode+") "+departureDate.toLocaleDateString('en-GB', {'day':'2-digit', 'month':'short'})+" "+ departureTime+"\r\n";
-			leg = leg + "Arrival "+arrivalAirport + " ("+arrivalIATACode+") "+arrivalDate.toLocaleDateString('en-GB', {'day':'2-digit', 'month':'short'}) + " " +arrivalTime+"\r\n";
-
-			var legHTML = "";
-			legHTML = legHTML + "<b>"+airline+ " "+flightNumber+"</b> (dur: "+travelTime+")" +"<br/>";
-			legHTML = legHTML + "Departure "+departureAirport + " ("+departureIATACode+") "+departureDate.toLocaleDateString('en-GB', {'day':'2-digit', 'month':'short'})+" "+ departureTime+"<br/>";
-			legHTML = legHTML + "Arrival "+arrivalAirport + " ("+arrivalIATACode+") "+arrivalDate.toLocaleDateString('en-GB', {'day':'2-digit', 'month':'short'}) + " " +arrivalTime+"<br/>";
-
-
-			trip = trip + leg + "\r\n";
-			tripHTML = tripHTML + legHTML + "<br/>"
-		});
-	});
-
-
-	document.removeEventListener("copy", copyListener, true);
-	event.preventDefault();
-	let clipboardData = event.clipboardData;
-	clipboardData.clearData();
-	clipboardData.setData("text/plain", trip);
-	clipboardData.setData("text/html", tripHTML);
-};
-document.addEventListener("copy", copyListener, true);
-document.execCommand("copy");
-toastr.success('Data copied to clipboard')
+;(async () => {
+  try {
+    const { count, text, html } = await run()
+    showToast(`Copied ${count} flight leg${count === 1 ? "" : "s"} to clipboard`)
+    window.__gfeResult = { ok: true, count, text, html }
+  } catch (err) {
+    console.error("GoogleFlightsExport failed:", err)
+    showToast(`Export failed: ${err.message}`, { error: true })
+    window.__gfeResult = { ok: false, error: err.message }
+  }
+})()
