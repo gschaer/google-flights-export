@@ -71,3 +71,7 @@ When it breaks — and it will, because Google cycles these class names — the 
 ## License
 
 MIT — see [LICENSE.md](LICENSE.md).
+
+## Disclaimer
+
+This is an unofficial, independent project and is not affiliated with, endorsed by, or sponsored by Google LLC. "Google Flights" is a trademark of Google LLC. The bookmarklet only reads DOM content already visible in your browser and does not interact with any Google API. Use at your own risk; Google may change the page structure at any time, breaking extraction.
